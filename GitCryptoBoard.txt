@@ -1,0 +1,74 @@
+###Crypto Dashboard
+#from the cryptocompare.com free api.
+#Import into Power BI or other dashboards
+
+
+import requests
+import pandas as pd
+#There are tons of symbols.  This is the first API request and I could get calls for 100 coins in one call.
+coins='BTC,BNB,ETH,ADA,XRP,DOT,LTC,BUSD,BCH,HT,EOS,LINK,TRX,DASH,DOGE,OKB,XLM,RVN,ETC,UNI,NEO,USDT,ZEC,BSV,REN,SXP,ATOM,BTT,SUSHI,CAKE,AAVE,XEM,MIOTA,IOST,XTZ,USDC,XMR,ONT,VET,FIL,MATIC,FTT,OMG,ICX,ALGO,XVS,YFI,QTUM,BAKE,CRV,SOL,AVAX,BNT,CRO,ZIL,GLM,KSM,LUNA,EGLD,SRM,SNX,THETA,JST,BAND,CHZ,TMTG,TFUEL,ZRX,CVC,WAVES,GRT,MANA,BAT,HBAR,FTM,GT,ELF,COMP,WBTC,CELO,NPXS,DGB,YFII,PAY,ALPHA,FRONT,DVP,RUNE,OXT,RSR,KNC,LSK,MX,NANO,REP,COTI,ENJ,LOOM,LRC,KAVA'
+extraParams='dogedash'
+#Multi-coin api call
+multi='https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC&tsyms=USD,EUR'
+api='YOURCRYPTOCOMPAREAPIKEYHERE'
+
+params=(
+    f'extraParams={extraParams}&'
+    f'fsyms={coins}&' #YOUR COINS FROM THE LIST ABOVE
+    f'api_key={api}') #YOUR API FROM CRYPTOCOMPARE
+
+url=multi+params
+
+r=requests.get(url).json()
+df=pd.DataFrame(r)
+c1=pd.json_normalize(df['DISPLAY'])
+c2=pd.json_normalize(df['RAW'])
+#Coin Table is the finished DF for Power Bi or whatever software you choose to import.
+CoinTable=pd.concat([c1,c2],axis=1)
+#Had to cut the class off the naming of the column, Instead of renaming in another software.
+col=CoinTable.columns
+for c in col:
+    c2=c[4:]
+    CoinTable=CoinTable.rename(columns={c:c2})
+
+c1=pd.json_normalize(df['DISPLAY'])
+c2=pd.json_normalize(df['RAW'])
+
+CoinTable=pd.concat([c1,c2],axis=1)
+
+col=CoinTable.columns
+for c in col:
+    c2=c[4:]
+    CoinTable=CoinTable.rename(columns={c:c2})
+
+#Second table below uses one API call of your 250,000 call limit, for each coin selected.  I chose 6 coins.
+coins2=['BTC','BNB','ETC','ETH','DOGE','LTC']
+
+def GetCoin(name):
+    global coins2, coinmap
+    coinmap={}
+    hist='https://min-api.cryptocompare.com/data/v2/histoday?'
+    api='YOURCRYPTOAPIKEYHERE'
+    for coin in coins2:
+        params=(
+            'extraParams=DogeDash&'
+            f'fsym={coin}&'
+            'tsym=USD&'
+            f'api_key={api}&'
+            'limit=30')
+        r2url=hist+params
+        r=requests.get(r2url).json()
+        r=pd.json_normalize(r)
+        coindf=pd.DataFrame(r['Data.Data'])
+        coindf=coindf.explode('Data.Data').reset_index(drop=True)
+        coindf=pd.json_normalize(coindf['Data.Data'])
+        coindf['symbol']=coin
+        coinmap[coin]=coindf
+
+    return (coinmap)
+    
+GetCoin(coins2)       
+
+coinmap.keys()
+#Final Table CoinHistory can go up to 2000 days back.
+CoinHistory=pd.concat(coinmap)
